@@ -5,3 +5,11 @@ For the current desktop campaign (C1516_en6C_dsk_FR) we would like to know what 
 ## Notes
 
 * SQL Database Overview: https://collab.wikimedia.org/wiki/Fundraising/Engineering/SQL_Database_Overview
+
+## Results
+
+![](plot_donors_by_year.png)
+
+![](plot_donors_by_year_standardized.png)
+
+![](plot_donors_by_campaign.png)
