@@ -67,8 +67,7 @@ donors$group_id <- ifelse(donors$utm_campaign %in% c("C1516_en6C_dsk_FR", "C14_e
 donors$group_id[donors$utm_campaign == "C14_en5C_dec_dsk_FR"] <- "last year's campaign"
 donors$group_id[donors$utm_campaign == "C1516_en6C_dsk_FR"] <- "this year's campaign"
 
-# Get initial IDs by email:
-donors$donor_id <- as.numeric(factor(donors$email))
-
-write_tsv(donors, '~/T120708.tsv')
-system('gzip ~/T120708.tsv')
+save(donors, file = "~/T120708.RData")
+system("openssl aes-256-cbc -salt -in T120708.RData -out T120708.RData.aes -k `cat pwd`")
+file.remove("T120708.RData")
+q(ask = FALSE)
