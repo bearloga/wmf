@@ -1,0 +1,10 @@
+.reveal {
+  font-size: 28pt;
+  word-wrap: normal;
+  -moz-hyphens: none;
+  -epub-hyphens: none;
+}
+
+.small-code pre code {
+  font-size: 1em;
+}
