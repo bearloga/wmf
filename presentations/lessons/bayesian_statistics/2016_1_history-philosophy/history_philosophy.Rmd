@@ -1,0 +1,13 @@
+---
+title: "Introduction to Bayesian Statistics Part I: History and Philosophy"
+author: "Mikhail Popov"
+date: "January 9, 2016"
+output:
+  beamer_presentation:
+    includes:
+      in_header: ../../../../shared/header.tex
+---
+
+## R Markdown
+
+This is an R Markdown presentation. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
