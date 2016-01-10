@@ -135,48 +135,58 @@ Let's see how our choice of hyperparameters affects the posterior...
 normalize_density <- function(x) {
   return(x/max(x))
 }
-fluidPage(
-  fluidRow(
-    column(numericInput('seed', 'Seed', 0, 1e6, step = 1, value = 0), width = 3),
-    column(numericInput('n', 'Trials', 10, 1000, step = 10, value = 30), width = 3),
-    column(sliderInput('a', 'α', 0, 100, step = 1, value = 1), width = 3),
-    column(sliderInput('b', 'β', 0, 100, step = 1, value = 1), width = 3))
+shinyApp(
+  ui = fluidPage(
+    fluidRow(
+      column(sliderInput('n', 'Coin flips', 0, 500, step = 5, value = 10), width = 4),
+      column(sliderInput('a_1', 'Shape parameter α', 0, 100, step = 1, value = 1), width = 4),
+      column(sliderInput('b_1', 'Shape parameter β', 0, 100, step = 1, value = 1), width = 4)),
+    plotOutput('prior_posterior')
+  ),
+  server = function(input, output) {
+    prob_head <- 0.64
+    flips <- reactiveValues(n = 0, y = 0)
+    observe({
+      input$n
+      set.seed(0)
+      flips$n <- isolate(input$n)
+      flips$y <- sum(rbinom(isolate(input$n), 1, prob_head))
+    })
+    output$prior_posterior <- renderPlot({
+      n <- flips$n
+      y <- flips$y
+      p <- prob_head
+      a_prior <- input$a_1
+      b_prior <- input$b_1
+      x <- seq(0, 1, 0.01)
+      likelihood <- normalize_density(sapply(x, function(theta) {
+        dbinom(y, n, prob = theta)
+      }))
+      y_prior <- normalize_density(dbeta(x, a_prior, b_prior))
+      a_post <- a_prior + y
+      b_post <- b_prior + n - y
+      y_post <- normalize_density(dbeta(x, a_post, b_post))
+      plot(x, y_prior, main = "Prior and Posterior",
+           xlab = expression(theta), ylab = "density (normalized for visualization)",
+           type = "l", lty = "dotted", yaxt = "n", ylim = c(0, 1), lwd = 2)
+      
+      x_lower <- qbeta(0.025, a_post, b_post)
+      x_upper <- qbeta(0.975, a_post, b_post)
+      x2 <- seq(x_lower, x_upper, length.out = 1000)
+      polygon(c(x_lower, x2, x_upper, x_lower),
+              c(0, normalize_density(dbeta(x2, a_post, b_post)), 0, 0), col = rgb(0.5, 0.5, 0.5, 0.25))
+      abline(v = p, lty = "solid", lwd = 2, col = "blue")
+      abline(v = y/n, lty = "dashed", lwd = 2, col = "red")
+      lines(x, likelihood, lty = "dashed", lwd = 2, col = "red")
+      lines(x, y_post, lwd = 2)
+      legend("topleft", c(sprintf("Prior: Beta(%.0f,%.0f)", a_prior, b_prior),
+                          sprintf("Likelhood & sample prop based on %.0f heads in %.0f flips", y, n),
+                          sprintf("Posterior: Beta(%.0f,%.0f)", a_post, b_post)),
+             lty = c("dotted", "dashed", "solid"), lwd = 2,
+             col = c("black", "red", "black"))
+    })
+  }, options = list(width = 800)
 )
-renderPlot({
-  set.seed(input$seed)
-  n <- input$n
-  p <- runif(1, 0.2, 0.4)
-  y <- sum(rbinom(n, 1, p))
-  a_prior <- input$a
-  b_prior <- input$b
-  x <- seq(0, 1, 0.01)
-  likelihood <- normalize_density(sapply(x, function(theta) {
-    dbinom(y, n, prob = theta)
-  }))
-  y_prior <- normalize_density(dbeta(x, a_prior, b_prior))
-  a_post <- a_prior + y
-  b_post <- b_prior + n - y
-  y_post <- normalize_density(dbeta(x, a_post, b_post))
-  plot(x, y_prior, main = "Prior and Posterior",
-       xlab = expression(theta), ylab = "density (normalized for visualization)",
-       type = "l", lty = "dotted", yaxt = "n", ylim = c(0, 1), lwd = 2)
-  
-  x_lower <- qbeta(0.025, a_post, b_post)
-  x_upper <- qbeta(0.975, a_post, b_post)
-  x2 <- seq(x_lower, x_upper, length.out = 1000)
-  polygon(c(x_lower, x2, x_upper, x_lower),
-          c(0, normalize_density(dbeta(x2, a_post, b_post)), 0, 0), col = rgb(0.5, 0.5, 0.5, 0.25))
-  abline(v = p, lty = "solid", lwd = 2, col = "blue")
-  abline(v = y/n, lty = "dashed", lwd = 2, col = "red")
-  lines(x, likelihood, lty = "dashed", lwd = 2, col = "red")
-  lines(x, y_post, lwd = 2)
-  legend("topright", c(sprintf("Prior: Beta(%.0f,%.0f)", a_prior, b_prior),
-                      sprintf("Likelhood & sample prop based on y = %.0f, n = %.0f", y, n),
-                      sprintf("Posterior: Beta(%.0f,%.0f)", a_post, b_post),
-                      sprintf('"True" success rate: %.2f', p)),
-         lty = c("dotted", "dashed", "solid", "solid"), lwd = 2,
-         col = c("black", "red", "black", "blue"), bty = "n")
-}, width = 800)
 ```
 
 ## Aside: _"MCMC is my favorite MC"_
