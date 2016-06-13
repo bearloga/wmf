@@ -8,6 +8,10 @@ Collection of statistical and other code for work at the Wikimedia Foundation (W
 
 - [_Dashboards in Shiny_](./presentations/lessons/dashboarding/2015_howto_shinydashboard/)
 - [_A Brief Introduction to Bayesian Inference_](./presentations/lessons/bayesian_statistics/2015_teaching_bayes2bae/)
+- [Statistical Graph Literacy](./presentations/lessons/data_visualization/literacy/)
+
+#### In-progress
+
 - [Introduction to Data Visualization: Fundamentals](./presentations/lessons/data_visualization/fundamentals/) (In-progress)
 - **Introduction to Bayesian Statistics** (In-progress)
   - [Part I: History and Philosophy](./presentations/lessons/bayesian_statistics/2016_1_history-philosophy/) 
