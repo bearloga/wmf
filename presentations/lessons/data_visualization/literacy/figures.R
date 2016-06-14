@@ -161,15 +161,53 @@ gg +
   theme(legend.position = "bottom")
 
 library(dplyr)
+data(population, package = "ggcounty")
+population$brk <- cut(population$count, 
+                      breaks=c(0, 100, 1000, 10000, 100000, 1000000, 10000000), 
+                      labels=c("0-99", "100-1K", "1K-10K", "10K-100K", 
+                               "100K-1M", "1M-10M"),
+                      include.lowest=TRUE)
+
+temp <- population %>%
+  sample_frac(0.25) %>%
+  group_by(brk) %>%
+  summarize(n = n()) %>%
+  mutate(prop = n/sum(n))
+temp$se <- sqrt((temp$prop * (1-temp$prop))/temp$n)
+temp$lower <- pmax(0, temp$prop + qnorm(0.025) * temp$se)
+temp$upper <- pmin(1, temp$prop + qnorm(0.975) * temp$se)
+
+temp %>%
+  ggplot(aes(x = brk, y = prop)) +
+  geom_bar(stat = "identity", position = "dodge", fill = "cornflowerblue") +
+  labs(y = "Counties in U.S.", x = "Population") +
+  geom_errorbar(aes(ymax = upper, ymin = lower), width = 0.25) +
+  scale_y_continuous(labels = scales::percent_format()) +
+  ggthemes::theme_tufte(base_size = 14, base_family = "Gill Sans")
+
 population %>%
   group_by(brk) %>%
   summarize(n = n()) %>%
   mutate(prop = n/sum(n)) %>%
-  ggplot(aes(x = brk, y = n)) +
-  geom_bar(stat = "identity") +
-  labs(x = "Population", y = "Counties in U.S.") +
-  geom_text(aes(label = sprintf("%.0f (%.1f%%)", n, 100*prop)), nudge_y = 50) +
+  ggplot(aes(x = "", y = n, fill = brk)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(y = "Counties in U.S.", x = NULL) +
+  scale_fill_brewer("Population", type = "qual", palette = "Set1") +
+  geom_text(aes(label = sprintf("%.0f (%.1f%%)", n, 100*prop), vjust = -1), position = position_dodge(width = 1)) +
   ggthemes::theme_tufte(base_size = 14, base_family = "Gill Sans")
+
+population %>%
+  group_by(brk) %>%
+  summarize(n = n()) %>%
+  mutate(prop = n/sum(n)) %>%
+  ggplot(aes(x = factor(1), y = prop, fill = brk)) +
+  geom_bar(stat = "identity", position = "stack", width = 1) +
+  scale_fill_brewer("Population", type = "qual", palette = "Set1") +
+  # geom_text(aes(label = sprintf("%.1f%%", 100*prop), y = cumsum(prop))) +
+  coord_polar(theta = "y") +
+  ggthemes::theme_tufte(base_size = 12, base_family = "Gill Sans") +
+  labs(x = NULL, y = NULL, title = "Pie Chart of Counties in U.S. by Population") +
+  theme(axis.title = element_blank(), axis.ticks = element_blank(), axis.text = element_blank())
 
 population %>%
   rename(Population = brk) %>%
