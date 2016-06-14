@@ -245,3 +245,10 @@ p2 <- ggplot(df, aes(x = log10(y))) + geom_histogram(aes(y = ..density..), fill 
 p3 <- ggplot(df, aes(x = x, y = y)) + geom_point() + ggtitle("Not a linear relationship between x and y") + theme_gray() + geom_smooth(se = FALSE, method = "lm", color = "#e91d63", size = 2)
 p4 <- ggplot(df, aes(x = x, y = log10(y))) + geom_point() + ggtitle("Linear relationship between x and transformed y") + theme_gray() + geom_smooth(se = FALSE, method = "lm", color = "#e91d63", size = 2)
 plot_grid(plotlist = list(p1, p2, p3, p4))
+
+library(radarchart) # install.packages("radarchart")
+df <- data.frame(Label = c("Writing", "Child-friendly", "Acting", "Art Direction", "Rewatchability", "Fun"),
+                 `X-Men: Apocalypse` = c(2, 1, 3, 3, 4, 5),
+                 `Man From U.N.C.L.E.` = c(4, 0, 5, 4, 2, 4),
+                 `Zootopia` = c(5, 5, 5, 5, 2, 5))
+chartJSRadar(scores = df, colMatrix = col2rgb(RColorBrewer::brewer.pal(3, "Set1")), showToolTipLabel = TRUE)
