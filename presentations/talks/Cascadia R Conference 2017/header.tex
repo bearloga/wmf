@@ -1,0 +1,27 @@
+\usetheme{metropolis}
+
+\titlegraphic{\includegraphics[height=0.1\paperheight]{Wikimedia-logo.svg.png}}
+
+\definecolor{WikimediaBlue}{RGB}{0,102,153}
+\definecolor{WikimediaGreen}{RGB}{51,153,102}
+\definecolor{WikimediaRed}{RGB}{153,0,0}
+\definecolor{WikimediaDarkGrey}{RGB}{72,72,72}
+\definecolor{WikimediaLightGrey}{RGB}{102,102,102}
+
+\setbeamercolor{title separator}{fg=WikimediaRed}
+\setbeamercolor{title}{fg=black}
+\setbeamercolor{author}{fg=black}
+\setbeamercolor{institute}{fg=WikimediaDarkGrey}
+\setbeamercolor{date}{fg=WikimediaLightGrey}
+\setbeamercolor{background canvas}{bg=white}
+\setbeamercolor{frametitle}{bg=WikimediaBlue}
+
+\usepackage{hyperref}
+\hypersetup{
+  colorlinks=true,
+  urlcolor=WikimediaGreen,
+  linkcolor=WikimediaRed
+}
+
+\let\oldhref\href
+\renewcommand{\href}[2]{\oldhref{#1}{\bfseries#2}}

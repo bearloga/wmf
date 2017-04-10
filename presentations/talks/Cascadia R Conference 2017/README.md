@@ -1,6 +1,6 @@
 # Open knowledge in R with Wikimedia APIs
 
-<a title="By Wikimedia Foundation (Wikimedia Foundation) [CC BY-SA 3.0 (http://creativecommons.org/licenses/by-sa/3.0)], via Wikimedia Commons" href="https://commons.wikimedia.org/wiki/File%3AWmf_logo_horiz_K.svg"><img width="64" alt="Wmf logo horiz K" src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/60/Wmf_logo_horiz_K.svg/64px-Wmf_logo_horiz_K.svg.png"/></a> <a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-sa/4.0/80x15.png" /></a>
+<a title="By Wikimedia Foundation (Wikimedia Foundation) [CC BY-SA 3.0 (https://creativecommons.org/licenses/by-sa/3.0)], via Wikimedia Commons" href="https://commons.wikimedia.org/wiki/File%3AWmf_logo_horiz_K.svg"><img width="64" alt="Wmf logo horiz K" src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/60/Wmf_logo_horiz_K.svg/64px-Wmf_logo_horiz_K.svg.png"/></a> <a rel="license" href="https://creativecommons.org/licenses/by-sa/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-sa/4.0/80x15.png" /></a>
 
 ## Abstract
 
@@ -13,7 +13,7 @@ This is a list of known dependencies:
 - **LaTeX**
     - [XeLaTeX](http://xetex.sourceforge.net/)
     - [Metropolis theme](https://github.com/matze/mtheme) ([beamertheme-metropolis](https://ctan.org/pkg/beamertheme-metropolis) on CTAN)
-- **R** (>= 3.2.0)
+- **R**
     - Presentation: [R Markdown](http://rmarkdown.rstudio.com/), [knitr](https://yihui.name/knitr/)
     - Essentials: [httr](https://github.com/hadley/httr), [curl](https://github.com/jeroen/curl), [jsonlite](https://github.com/jeroen/jsonlite)
     - API wrappers:
@@ -21,7 +21,7 @@ This is a list of known dependencies:
         - [WikipediR](https://github.com/Ironholds/WikipediR) for getting content of MediaWiki articles
         - [WikidataR](https://github.com/Ironholds/WikidataR) for finding and retrieving items and properties
         - [WikidataQueryServiceR](https://github.com/bearloga/WikidataQueryServideR) for querying Wikidata using SPARQL
-        - [SPARQL](https://cran.r-project.org/package=SPARQL) and specifying the endpoint URL via:
+          _Alternatively_: [SPARQL](https://cran.r-project.org/package=SPARQL) and specifying the endpoint URL via:
           `url = "https://query.wikidata.org/bigdata/namespace/wdq/sparql"`
 
 <hr />
