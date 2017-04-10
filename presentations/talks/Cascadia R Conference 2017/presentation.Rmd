@@ -8,7 +8,6 @@ output:
     highlight: kate
     includes:
       in_header: header.tex
-    keep_tex: yes
     latex_engine: xelatex
     md_extensions: -autolink_bare_uris+hard_line_breaks+startnum+definition_lists
   md_document:

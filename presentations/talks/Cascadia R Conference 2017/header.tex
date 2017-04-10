@@ -23,5 +23,7 @@
   linkcolor=WikimediaRed
 }
 
+% Make links bold:
 \let\oldhref\href
 \renewcommand{\href}[2]{\oldhref{#1}{\bfseries#2}}
+% via http://tex.stackexchange.com/a/351652/130882
