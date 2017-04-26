@@ -9,13 +9,14 @@ output:
       in_header: header.tex
     keep_tex: yes
     latex_engine: xelatex
-    md_extensions: -autolink_bare_uris+hard_line_breaks+startnum+definition_lists+footnotes
+    md_extensions: -autolink_bare_uris+hard_line_breaks+startnum+definition_lists+footnotes+raw_tex
   md_document:
     includes:
       before_body: prefix.md
     toc: yes
     toc_depth: 2
     variant: markdown_github+backtick_code_blocks+autolink_bare_uris+startnum+definition_lists+footnotes
+subtitle: Follow along at `git.io/vSi6a`
 institute: Wikimedia Foundation
 ---
 
@@ -41,13 +42,23 @@ install.packages(
 
 ## Session Info
 
+```{r md, echo=knitr::opts_knit$get("rmarkdown.pandoc.to") != "beamer"}
+suppressPackageStartupMessages({
+  library(magrittr)
+  library(ggplot2)
+  library(dplyr)
+  library(lubridate)
+  library(knitr)
+  library(xml2)
+})
+```
+
 ```{r session_info, echo=FALSE}
-library(magrittr)
 session_info <- sessionInfo(package = c(
   "pageviews", "WikipediR", "WikidataR",
   "WikidataQueryServiceR"
 ))
-pkgs <- dplyr::bind_rows(session_info$otherPkgs)
+pkgs <- bind_rows(session_info$otherPkgs)
 pkgs$Imports <- vapply(regmatches(pkgs$Imports, gregexpr("([a-zA-Z]+)", pkgs$Imports)), paste, "", collapse = ", ")
 ```
 
@@ -57,29 +68,96 @@ pkgs$Imports <- vapply(regmatches(pkgs$Imports, gregexpr("([a-zA-Z]+)", pkgs$Imp
 - Using the following versions of packages for demos:
 
 ```{r pkgs, echo=FALSE}
-knitr::kable(pkgs[, c("Package", "Version", "Imports")])
+kable(pkgs[, c("Package", "Version", "Imports")])
 ```
+
+## Wikipedia
+
+```{r wikipedia, echo=FALSE, results='asis'}
+if (knitr::opts_knit$get("rmarkdown.pandoc.to") == "beamer") {
+  cat("\\begin{columns}
+  \\begin{column}{0.5\\textwidth}
+    \\href{https://www.wikipedia.org/}{Wikipedia} is a free encyclopedia that anyone can edit\\\\\\vspace{0.5em}
+    You may have heard of it\\\\\\vspace{0.5em}
+    It is available in 296 languages\\\\\\vspace{0.5em}
+    English Wikipedia has over 5.3 million articles\\\\\\vspace{0.5em}
+    Wikipedia is powered by \\href{https://www.mediawiki.org/wiki/MediaWiki}{MediaWiki}, which includes an \\href{https://www.mediawiki.org/wiki/API:Main_page}{API} that makes it fast and easy to fetch content
+  \\end{column}
+  \\begin{column}{0.5\\textwidth}
+    \\includegraphics[width=\\textwidth]{portal}
+  \\end{column}
+\\end{columns}")
+} else {
+  cat("![Example of using Wikipedia.org portal with Russian set as the primary browser language.](portal.png)
+
+- [Wikipedia](https://www.wikipedia.org/) is a free encyclopedia that anyone can edit
+- You may have heard of it
+- It is available in 296 languages
+- English Wikipedia has over 5.3 million articles
+- Wikipedia is powered by [MediaWiki](https://www.mediawiki.org/wiki/MediaWiki), which includes an [API](https://www.mediawiki.org/wiki/API:Main_page) that makes it fast and easy to fetch content")
+}
+```
+
+## WikipediR
+
+[WikipediR](https://cran.r-project.org/package=WikipediR) is a wrapper for MediaWiki API but aimed at Wikimedia's wikis such as Wikipedia. It can be used to retrieve page text, information about users or the history of pages, and elements of the category tree.
+
+```{r article_data, cache=TRUE, message=FALSE}
+library(WikipediR)
+r_wiki <- page_content(
+  language = "en",
+  project = "wikipedia",
+  page_name = "R (programming language)"
+)
+r_releases <- r_wiki$parse$text$`*` %>%
+  read_html %>%
+  xml_find_first(".//table[@class='wikitable']") %>%
+  rvest::html_table()
+```
+
+----
+
+```{r article_print, echo=FALSE}
+r_releases %>%
+  mutate(Description = paste0(strtrim(Description, 40), "...")) %>%
+  kable
+```
+
+## MediaWiki-powered sites' APIs
+
+- Use `language` and `project` arguments for Wikimedia's wikis[^wikis]
+- Use `domain` for everything else, such as:
+    - Project Gutenberg's wiki:
+      `domain = "www.gutenberg.org/w/api.php"`
+    - Mozilla Foundation's wiki:
+      `domain = "wiki.mozilla.org/api.php"`
+    - Geek Feminism wiki:
+      `domain = "geekfeminism.wikia.com/api.php"`
+    - A Wiki of Ice and Fire:
+      `domain = "awoiaf.westeros.org/api.php"`
+- **Tip**: if using `random_page`, specify `namespaces = 0` to only get articles
+
+[^wikis]: Currently: [Commons](https://commons.wikimedia.org/), [Wikivoyage](https://www.wikivoyage.org/), [Wikiquote](https://www.wikiquote.org/), [Wikisource](https://www.wikisource.org/), [Wikibooks](https://www.wikibooks.org/), [Wikinews](https://www.wikinews.org/), [Wikiversity](https://www.wikiversity.org/), [Wikispecies](https://species.wikimedia.org/), [MediaWiki](https://www.mediawiki.org/), [Meta-Wiki](https://meta.wikimedia.org/), [Wiktionary](https://www.wiktionary.org/)
 
 ## Pageviews
 
 WMF provides an [API for accessing daily and monthly pageviews of any article on any project](https://wikitech.wikimedia.org/wiki/Analytics/PageviewAPI) for counts from 2015 onwards.[^old] The package [pageviews](https://cran.r-project.org/package=pageviews) allows you to get those counts in R:
 
-[^old]: [wikipediatrend](https://cran.r-project.org/package=wikipediatrend) package wraps the [stats.grok.se](http://stats.grok.se/) API which has historical Wikipedia pageview data for 2008 up to 2016 from [these pageview count dumps](https://dumps.wikimedia.org/other/pagecounts-raw/).
+[^old]: [wikipediatrend](https://cran.r-project.org/package=wikipediatrend) package wraps the [stats.grok.se](http://stats.grok.se/) API which has historical Wikipedia pageview data for 2008 up to 2016 from [these pageview count dumps](https://dumps.wikimedia.org/other/pagecounts-raw/)
 
-```{r pageviews_data, cache=TRUE}
+```{r pageviews_data, cache=TRUE, message=FALSE}
 library(pageviews)
 r_pageviews <- article_pageviews(
   project = "en.wikipedia",
   article = "R (programming language)",
   user_type = "user", start = "2015100100",
-  end = format(Sys.time(), "%Y%m%d%H%M00")
+  end = format(Sys.Date() - 1, "%Y%m%d00")
 )
 ```
 
 ----
 
 ```{r pageviews_visualization, echo=knitr::opts_knit$get("rmarkdown.pandoc.to") != "beamer", dev='png', dpi=300, fig.align='center', out.width='\\linewidth', fig.path='figures/'}
-library(ggplot2)
 r_pageviews$date %<>% as.Date()
 ggplot(r_pageviews, aes(x = date, y = views)) +
   geom_line(color = rgb(0, 102, 153, maxColorValue = 255)) +
@@ -111,6 +189,25 @@ ggplot(r_pageviews, aes(x = date, y = views)) +
     - "RStudio" ([Q4798119](https://www.wikidata.org/wiki/Q4798119)) was "programmed in" ([P277](https://www.wikidata.org/wiki/Property:P277)) "C++" ([Q2407](https://www.wikidata.org/wiki/Q2407))
     - "Portland" ([Q6106](https://www.wikidata.org/wiki/Q6106)) had a "population" ([P1082](https://www.wikidata.org/wiki/Property:P1082)) of 583,776 (in 2010)
 - Resources and properties have unique numeric identifiers but can have human-friendly labels in any language
+
+## WikidataR
+
+```{r wikidata_search, cache=TRUE}
+library(WikidataR)
+r_search <- find_item("R")[[8]]
+r_search[c("id", "description")] # check the results
+```
+
+----
+
+```{r wikidata_fetch, cache=TRUE}
+property <- get_property("P31")
+property$labels$`en`$value # check that we want P31
+r_item <- get_item(r_search$id)
+r_item$claims$P31$mainsnak$datavalue$value$id # extract values
+```
+
+This tells us that R is an instance of `r paste0(r_item$claims$P31$mainsnak$datavalue$value$id, collapse = ", ")`. Great?
 
 ## Wikidata Query Service (WDQS)
 
@@ -181,15 +278,50 @@ WHERE {
 r_versions_results <- query_wikidata(r_versions_query)
 ```
 
-### Results
+```{r wdqs_advanced_processing, echo=knitr::opts_knit$get("rmarkdown.pandoc.to") != "beamer"}
+r_versions_results %<>%
+  arrange(publicationDate) %>%
+  mutate(publicationDate = as.Date(ymd_hms(publicationDate)))
+```
 
 ```{r wdqs_advanced_print, results='asis', echo=FALSE}
-r_versions_results <- dplyr::arrange(r_versions_results, publicationDate)
-knitr::kable(rbind(
-  head(r_versions_results, 3),
-  data.frame(softwareVersion = "...", publicationDate = "..."),
-  tail(r_versions_results, 3)
+kable(rbind(
+  head(mutate(r_versions_results, publicationDate = format(publicationDate)), 3),
+  data_frame(softwareVersion = "...", publicationDate = "..."),
+  tail(mutate(r_versions_results, publicationDate = format(publicationDate)), 3)
 ), row.names = FALSE)
+```
+
+----
+
+```{r pageviews_visualization_2, echo=knitr::opts_knit$get("rmarkdown.pandoc.to") != "beamer", dev='png', dpi=300, fig.align='center', out.width='\\linewidth', fig.path='figures/'}
+set.seed(20170603)
+r_versions_results %<>% mutate(position = 8e3 + runif(nrow(.), -2e3, 2e3))
+ggplot(r_pageviews, aes(x = date, y = views)) +
+  geom_vline(data = filter(r_versions_results, publicationDate >= "2015-10-01"),
+             aes(xintercept = as.numeric(publicationDate)),
+             color = "gray40", linetype = "dashed") +
+  geom_line(color = rgb(0, 102, 153, maxColorValue = 255)) +
+  geom_text(data = dplyr::top_n(r_pageviews, 1, views),
+            aes(x = date, y = views, label = format(date, "%d %B %Y"),
+                hjust = "left"), nudge_x = 10, size = 6) +
+  geom_text(data = filter(r_versions_results, publicationDate >= "2015-10-01"),
+            aes(x = publicationDate, label = softwareVersion, y = position),
+            color = "gray20", size = 6, angle = 30) +
+  geom_point(data = filter(r_versions_results, publicationDate >= "2015-10-01"),
+            aes(x = publicationDate, y = position - 7.5e2),
+            color = "gray20", size = 3, shape = 17) +
+  geom_point(data = dplyr::top_n(r_pageviews, 1, views),
+             aes(x = date, y = views), color = rgb(153/255, 0, 0)) +
+  scale_y_continuous(
+    breaks = seq(2e3, 10e3, 1e3),
+    labels = function(x) { return(sprintf("%.0fK", x/1e3)) }
+  ) +
+  scale_x_date(date_breaks = "2 months", date_labels = "%b\n%Y") +
+  labs(x = NULL, y = "Pageviews",
+       title = "R's releases and article pageviews on English Wikipedia",
+       subtitle = "Desktop and mobile traffic, excluding known bots") +
+  theme_minimal(base_size = 18, base_family = "Gill Sans")
 ```
 
 ## Final Remarks
