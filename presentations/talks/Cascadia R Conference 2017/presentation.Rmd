@@ -3,6 +3,12 @@ title: "Open knowledge in R with Wikimedia APIs"
 author: "Mikhail Popov"
 date: '`r format(Sys.Date(), "%d %B %Y")`'
 output:
+  md_document:
+    includes:
+      before_body: prefix.md
+    toc: yes
+    toc_depth: 2
+    variant: markdown_github+backtick_code_blocks+autolink_bare_uris+startnum+definition_lists+footnotes
   beamer_presentation:
     highlight: kate
     includes:
@@ -10,12 +16,6 @@ output:
     keep_tex: yes
     latex_engine: xelatex
     md_extensions: -autolink_bare_uris+hard_line_breaks+startnum+definition_lists+footnotes+raw_tex
-  md_document:
-    includes:
-      before_body: prefix.md
-    toc: yes
-    toc_depth: 2
-    variant: markdown_github+backtick_code_blocks+autolink_bare_uris+startnum+definition_lists+footnotes
 subtitle: Follow along at `git.io/vSi6a`
 institute: Wikimedia Foundation
 ---
@@ -250,7 +250,7 @@ WHERE {
   SERVICE wikibase:label {
     bd:serviceParam wikibase:language "en"
   }
-}') %>% head(n = 5L)
+}') %>% head(5)
 ```
 
 ## Advanced SPARQL Example
@@ -275,27 +275,19 @@ WHERE {
 ----
 
 ```{r wdqs_advanced_results, cache=TRUE, dependson='wdqs_advanced_query', message=FALSE}
-r_versions_results <- query_wikidata(r_versions_query)
-```
-
-```{r wdqs_advanced_processing, echo=knitr::opts_knit$get("rmarkdown.pandoc.to") != "beamer"}
-r_versions_results %<>%
-  arrange(publicationDate) %>%
-  mutate(publicationDate = as.Date(ymd_hms(publicationDate)))
-```
-
-```{r wdqs_advanced_print, results='asis', echo=FALSE}
-kable(rbind(
-  head(mutate(r_versions_results, publicationDate = format(publicationDate)), 3),
-  data_frame(softwareVersion = "...", publicationDate = "..."),
-  tail(mutate(r_versions_results, publicationDate = format(publicationDate)), 3)
-), row.names = FALSE)
+r_versions_results <- query_wikidata(
+  r_versions_query, format = "smart"
+)
+# "smart" mode formats the datetime columns
+head(r_versions_results, 3)
+range(r_versions_results$publicationDate)
 ```
 
 ----
 
 ```{r pageviews_visualization_2, echo=knitr::opts_knit$get("rmarkdown.pandoc.to") != "beamer", dev='png', dpi=300, fig.align='center', out.width='\\linewidth', fig.path='figures/'}
 set.seed(20170603)
+r_versions_results$publicationDate %<>% as.POSIXct %>% as.Date
 r_versions_results %<>% mutate(position = 8e3 + runif(nrow(.), -2e3, 2e3))
 ggplot(r_pageviews, aes(x = date, y = views)) +
   geom_vline(data = filter(r_versions_results, publicationDate >= "2015-10-01"),

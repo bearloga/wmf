@@ -51,7 +51,7 @@ suppressPackageStartupMessages({
 ```
 
 -   Running R 3.4.0 on macOS Sierra 10.12.4
--   Rendered with [rmarkdown](http://rmarkdown.rstudio.com/) 1.4 and [knitr](https://yihui.name/knitr/) 1.15.1
+-   Rendered with [rmarkdown](http://rmarkdown.rstudio.com/) 1.5 and [knitr](https://yihui.name/knitr/) 1.15.1
 -   The pipe (`%>%`) from [magrittr](https://cran.r-project.org/package=magrittr) is **occasionally** used
 -   Using the following versions of packages for demos:
 
@@ -60,7 +60,7 @@ suppressPackageStartupMessages({
 | pageviews             | 0.3.0   | jsonlite, httr, curl             |
 | WikipediR             | 1.5.0   | httr, jsonlite                   |
 | WikidataR             | 1.2.0   | httr, jsonlite, WikipediR, utils |
-| WikidataQueryServiceR | 0.1.0   | httr, dplyr, jsonlite            |
+| WikidataQueryServiceR | 0.1.1   | httr, dplyr, jsonlite            |
 
 Wikipedia
 ---------
@@ -247,7 +247,7 @@ WHERE {
   SERVICE wikibase:label {
     bd:serviceParam wikibase:language "en"
   }
-}') %>% head(n = 5L)
+}') %>% head(5)
 ```
 
     ##                       instanceOfLabel
@@ -280,29 +280,29 @@ WHERE {
 ------------------------------------------------------------------------
 
 ``` r
-r_versions_results <- query_wikidata(r_versions_query)
+r_versions_results <- query_wikidata(
+  r_versions_query, format = "smart"
+)
+# "smart" mode formats the datetime columns
+head(r_versions_results, 3)
 ```
+
+    ##   softwareVersion publicationDate
+    ## 1           3.3.3      2017-03-06
+    ## 2           3.1.0      2014-04-10
+    ## 3           3.1.2      2014-10-31
 
 ``` r
-r_versions_results %<>%
-  arrange(publicationDate) %>%
-  mutate(publicationDate = as.Date(ymd_hms(publicationDate)))
+range(r_versions_results$publicationDate)
 ```
 
-| softwareVersion | publicationDate |
-|:----------------|:----------------|
-| 1.0.0           | 2000-02-29      |
-| 2.0.0           | 2004-10-04      |
-| 2.15.3          | 2013-03-01      |
-| ...             | ...             |
-| 3.3.2           | 2016-10-31      |
-| 3.3.3           | 2017-03-06      |
-| 3.4.0           | 2017-04-21      |
+    ## [1] "2000-02-29 GMT" "2017-04-21 GMT"
 
 ------------------------------------------------------------------------
 
 ``` r
 set.seed(20170603)
+r_versions_results$publicationDate %<>% as.POSIXct %>% as.Date
 r_versions_results %<>% mutate(position = 8e3 + runif(nrow(.), -2e3, 2e3))
 ggplot(r_pageviews, aes(x = date, y = views)) +
   geom_vline(data = filter(r_versions_results, publicationDate >= "2015-10-01"),
