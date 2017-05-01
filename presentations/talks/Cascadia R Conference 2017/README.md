@@ -15,14 +15,14 @@ This is a list of known dependencies:
     - [Metropolis theme](https://github.com/matze/mtheme) ([beamertheme-metropolis](https://ctan.org/pkg/beamertheme-metropolis) on CTAN)
 - **R**
     - Presentation: [R Markdown](http://rmarkdown.rstudio.com/), [knitr](https://yihui.name/knitr/)
-    - Essentials: [httr](https://github.com/hadley/httr), [curl](https://github.com/jeroen/curl), [jsonlite](https://github.com/jeroen/jsonlite)
+    - Essentials: [magrittr](https://github.com/tidyverse/magrittr), [httr](https://github.com/hadley/httr), [curl](https://github.com/jeroen/curl), [jsonlite](https://github.com/jeroen/jsonlite), [rvest](https://github.com/hadley/rvest/), [xml2](https://github.com/hadley/xml2/)
     - API wrappers:
         - [pageviews](https://github.com/ironholds/pageviews) for getting counts of article pageviews
         - [WikipediR](https://github.com/Ironholds/WikipediR) for getting content of MediaWiki articles
         - [WikidataR](https://github.com/Ironholds/WikidataR) for finding and retrieving items and properties
         - [WikidataQueryServiceR](https://github.com/bearloga/WikidataQueryServideR) for querying Wikidata using SPARQL
           _Alternatively_: [SPARQL](https://cran.r-project.org/package=SPARQL) and specifying the endpoint URL via:
-          `url = "https://query.wikidata.org/bigdata/namespace/wdq/sparql"`
+          `url = "https://query.wikidata.org/sparql"`
 
 <hr />
 

@@ -30,10 +30,16 @@ R packages required to follow along:
 
 ``` r
 install.packages(
-  c("pageviews", "WikipediR", "WikidataR",
-    "WikidataQueryServiceR", "magrittr"),
+  c("magrittr", "rvest", "xml2"
+    "pageviews", "WikipediR", "WikidataR",
+    "WikidataQueryServiceR"),
   repos = c(CRAN = "https://cran.rstudio.com")
 )
+```
+
+``` r
+# For data visualization:
+install.packages("ggplot2", repos = c(CRAN = "https://cran.rstudio.com"))
 ```
 
 Session Info
@@ -44,9 +50,7 @@ suppressPackageStartupMessages({
   library(magrittr)
   library(ggplot2)
   library(dplyr)
-  library(lubridate)
   library(knitr)
-  library(xml2)
 })
 ```
 
@@ -79,15 +83,15 @@ WikipediR
 [WikipediR](https://cran.r-project.org/package=WikipediR) is a wrapper for MediaWiki API but aimed at Wikimedia's wikis such as Wikipedia. It can be used to retrieve page text, information about users or the history of pages, and elements of the category tree.
 
 ``` r
-library(WikipediR)
+library(WikipediR); library(magrittr)
 r_wiki <- page_content(
   language = "en",
   project = "wikipedia",
   page_name = "R (programming language)"
 )
 r_releases <- r_wiki$parse$text$`*` %>%
-  read_html %>%
-  xml_find_first(".//table[@class='wikitable']") %>%
+  xml2::read_html() %>%
+  xml2::xml_find_first(".//table[@class='wikitable']") %>%
   rvest::html_table()
 ```
 
@@ -199,7 +203,7 @@ property$labels$`en`$value # check that we want P31
 
 ``` r
 r_item <- get_item(r_search$id)
-r_item$claims$P31$mainsnak$datavalue$value$id # extract values
+r_item$claims$P31$mainsnak$datavalue$value$id
 ```
 
     ## [1] "Q9143"     "Q341"      "Q20825628" "Q28920142" "Q3839507"  "Q12772052"
@@ -302,7 +306,7 @@ range(r_versions_results$publicationDate)
 
 ``` r
 set.seed(20170603)
-r_versions_results$publicationDate %<>% as.POSIXct %>% as.Date
+r_versions_results$publicationDate %<>% as.Date
 r_versions_results %<>% mutate(position = 8e3 + runif(nrow(.), -2e3, 2e3))
 ggplot(r_pageviews, aes(x = date, y = views)) +
   geom_vline(data = filter(r_versions_results, publicationDate >= "2015-10-01"),

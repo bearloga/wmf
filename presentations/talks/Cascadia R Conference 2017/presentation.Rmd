@@ -32,12 +32,18 @@ A Markdown copy of this deck is at [git.io/vSi6a](https://git.io/vSi6a) for foll
 
 R packages required to follow along:
 
-```{r install, eval=FALSE}
+```{r install_necessary, eval=FALSE}
 install.packages(
-  c("pageviews", "WikipediR", "WikidataR",
-    "WikidataQueryServiceR", "magrittr"),
+  c("magrittr", "rvest", "xml2"
+    "pageviews", "WikipediR", "WikidataR",
+    "WikidataQueryServiceR"),
   repos = c(CRAN = "https://cran.rstudio.com")
 )
+```
+
+```{r install_optional, eval=FALSE, echo=knitr::opts_knit$get("rmarkdown.pandoc.to") != "beamer"}
+# For data visualization:
+install.packages("ggplot2", repos = c(CRAN = "https://cran.rstudio.com"))
 ```
 
 ## Session Info
@@ -47,9 +53,7 @@ suppressPackageStartupMessages({
   library(magrittr)
   library(ggplot2)
   library(dplyr)
-  library(lubridate)
   library(knitr)
-  library(xml2)
 })
 ```
 
@@ -103,15 +107,15 @@ if (knitr::opts_knit$get("rmarkdown.pandoc.to") == "beamer") {
 [WikipediR](https://cran.r-project.org/package=WikipediR) is a wrapper for MediaWiki API but aimed at Wikimedia's wikis such as Wikipedia. It can be used to retrieve page text, information about users or the history of pages, and elements of the category tree.
 
 ```{r article_data, cache=TRUE, message=FALSE}
-library(WikipediR)
+library(WikipediR); library(magrittr)
 r_wiki <- page_content(
   language = "en",
   project = "wikipedia",
   page_name = "R (programming language)"
 )
 r_releases <- r_wiki$parse$text$`*` %>%
-  read_html %>%
-  xml_find_first(".//table[@class='wikitable']") %>%
+  xml2::read_html() %>%
+  xml2::xml_find_first(".//table[@class='wikitable']") %>%
   rvest::html_table()
 ```
 
@@ -204,7 +208,7 @@ r_search[c("id", "description")] # check the results
 property <- get_property("P31")
 property$labels$`en`$value # check that we want P31
 r_item <- get_item(r_search$id)
-r_item$claims$P31$mainsnak$datavalue$value$id # extract values
+r_item$claims$P31$mainsnak$datavalue$value$id
 ```
 
 This tells us that R is an instance of `r paste0(r_item$claims$P31$mainsnak$datavalue$value$id, collapse = ", ")`. Great?
@@ -287,7 +291,7 @@ range(r_versions_results$publicationDate)
 
 ```{r pageviews_visualization_2, echo=knitr::opts_knit$get("rmarkdown.pandoc.to") != "beamer", dev='png', dpi=300, fig.align='center', out.width='\\linewidth', fig.path='figures/'}
 set.seed(20170603)
-r_versions_results$publicationDate %<>% as.POSIXct %>% as.Date
+r_versions_results$publicationDate %<>% as.Date
 r_versions_results %<>% mutate(position = 8e3 + runif(nrow(.), -2e3, 2e3))
 ggplot(r_pageviews, aes(x = date, y = views)) +
   geom_vline(data = filter(r_versions_results, publicationDate >= "2015-10-01"),
