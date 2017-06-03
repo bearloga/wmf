@@ -328,6 +328,9 @@ set.seed(20170603)
 r_versions_results$publicationDate %<>% as.Date
 r_versions_results %<>% mutate(position = 8e3 + runif(nrow(.), -2e3, 2e3))
 p +
+  geom_smooth(formula = y ~ s(x, k = 9),
+              method = "gam", se = FALSE,
+              color = rgb(51, 153, 102, maxColorValue = 255)) +
   geom_vline(data = filter(r_versions_results, publicationDate >= "2015-10-01"),
              aes(xintercept = as.numeric(publicationDate)),
              color = "gray40", linetype = "dashed") +
