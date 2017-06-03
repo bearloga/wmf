@@ -196,20 +196,21 @@ r_search[c("id", "description")] # check the results
 ------------------------------------------------------------------------
 
 ``` r
-property <- get_property("P31")
+property <- get_property("P31")[[1]]
 property$labels$`en`$value # check that we want P31
 ```
 
-    ## NULL
+    ## [1] "instance of"
 
 ``` r
-r_item <- get_item(r_search$id)
+r_item <- get_item(r_search$id)[[1]]
 r_item$claims$P31$mainsnak$datavalue$value$id
 ```
 
-    ## NULL
+    ## [1] "Q9143"     "Q341"      "Q20825628" "Q28920142" "Q3839507"  "Q12772052"
+    ## [7] "Q1993334"  "Q24529812"
 
-This tells us that R is an instance of . Great?
+This tells us that R is an instance of Q9143, Q341, Q20825628, Q28920142, Q3839507, Q12772052, Q1993334, Q24529812. Great?
 
 Wikidata Query Service (WDQS)
 -----------------------------

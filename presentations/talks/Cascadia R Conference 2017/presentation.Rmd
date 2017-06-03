@@ -206,9 +206,9 @@ r_search[c("id", "description")] # check the results
 ----
 
 ```{r wikidata_fetch, cache=TRUE}
-property <- get_property("P31")
+property <- get_property("P31")[[1]]
 property$labels$`en`$value # check that we want P31
-r_item <- get_item(r_search$id)
+r_item <- get_item(r_search$id)[[1]]
 r_item$claims$P31$mainsnak$datavalue$value$id
 ```
 
