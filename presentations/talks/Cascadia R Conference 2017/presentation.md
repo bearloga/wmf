@@ -54,8 +54,8 @@ suppressPackageStartupMessages({
 })
 ```
 
--   Running R 3.4.0 on macOS Sierra 10.12.4
--   Rendered with [rmarkdown](http://rmarkdown.rstudio.com/) 1.5 and [knitr](https://yihui.name/knitr/) 1.15.1
+-   Running R 3.4.0 on macOS Sierra 10.12.5
+-   Rendered with [rmarkdown](http://rmarkdown.rstudio.com/) 1.5 and [knitr](https://yihui.name/knitr/) 1.16
 -   The pipe (`%>%`) from [magrittr](https://cran.r-project.org/package=magrittr) is **occasionally** used
 -   Using the following versions of packages for demos:
 
@@ -63,7 +63,7 @@ suppressPackageStartupMessages({
 |:----------------------|:--------|:---------------------------------|
 | pageviews             | 0.3.0   | jsonlite, httr, curl             |
 | WikipediR             | 1.5.0   | httr, jsonlite                   |
-| WikidataR             | 1.2.0   | httr, jsonlite, WikipediR, utils |
+| WikidataR             | 1.3.0   | httr, jsonlite, WikipediR, utils |
 | WikidataQueryServiceR | 0.1.1   | httr, dplyr, jsonlite            |
 
 Wikipedia
@@ -143,7 +143,7 @@ r_pageviews <- article_pageviews(
 
 ``` r
 r_pageviews$date %<>% as.Date()
-ggplot(r_pageviews, aes(x = date, y = views)) +
+p <- ggplot(r_pageviews, aes(x = date, y = views)) +
   geom_line(color = rgb(0, 102, 153, maxColorValue = 255)) +
   geom_text(data = dplyr::top_n(r_pageviews, 1, views),
             aes(x = date, y = views, label = format(date, "%d %B %Y"),
@@ -159,6 +159,7 @@ ggplot(r_pageviews, aes(x = date, y = views)) +
        title = "Daily pageviews of R's entry on English Wikipedia",
        subtitle = "Desktop and mobile traffic, excluding known bots") +
   theme_minimal(base_size = 18, base_family = "Gill Sans")
+plot(p)
 ```
 
 <img src="figures/pageviews_visualization-1.png" width="\linewidth" style="display: block; margin: auto;" />
@@ -199,17 +200,16 @@ property <- get_property("P31")
 property$labels$`en`$value # check that we want P31
 ```
 
-    ## [1] "instance of"
+    ## NULL
 
 ``` r
 r_item <- get_item(r_search$id)
 r_item$claims$P31$mainsnak$datavalue$value$id
 ```
 
-    ## [1] "Q9143"     "Q341"      "Q20825628" "Q28920142" "Q3839507"  "Q12772052"
-    ## [7] "Q1993334"  "Q24529812"
+    ## NULL
 
-This tells us that R is an instance of Q9143, Q341, Q20825628, Q28920142, Q3839507, Q12772052, Q1993334, Q24529812. Great?
+This tells us that R is an instance of . Great?
 
 Wikidata Query Service (WDQS)
 -----------------------------
@@ -261,6 +261,25 @@ WHERE {
     ## 4                interpreted language
     ## 5     functional programming language
 
+------------------------------------------------------------------------
+
+``` r
+query_wikidata('SELECT DISTINCT ?instanceOfLabel
+WHERE {
+  wd:Q206904 wdt:P31 ?instanceOf .
+  SERVICE wikibase:label {
+    bd:serviceParam wikibase:language "fr"
+  }
+}') %>% head(5)
+```
+
+    ##            instanceOfLabel
+    ## 1                Q28920142
+    ## 2 langage de programmation
+    ## 3           logiciel libre
+    ## 4 logiciel de statistiques
+    ## 5       langage interprété
+
 Advanced SPARQL Example
 -----------------------
 
@@ -308,14 +327,10 @@ range(r_versions_results$publicationDate)
 set.seed(20170603)
 r_versions_results$publicationDate %<>% as.Date
 r_versions_results %<>% mutate(position = 8e3 + runif(nrow(.), -2e3, 2e3))
-ggplot(r_pageviews, aes(x = date, y = views)) +
+p +
   geom_vline(data = filter(r_versions_results, publicationDate >= "2015-10-01"),
              aes(xintercept = as.numeric(publicationDate)),
              color = "gray40", linetype = "dashed") +
-  geom_line(color = rgb(0, 102, 153, maxColorValue = 255)) +
-  geom_text(data = dplyr::top_n(r_pageviews, 1, views),
-            aes(x = date, y = views, label = format(date, "%d %B %Y"),
-                hjust = "left"), nudge_x = 10, size = 6) +
   geom_text(data = filter(r_versions_results, publicationDate >= "2015-10-01"),
             aes(x = publicationDate, label = softwareVersion, y = position),
             color = "gray20", size = 6, angle = 30) +
@@ -323,16 +338,7 @@ ggplot(r_pageviews, aes(x = date, y = views)) +
             aes(x = publicationDate, y = position - 7.5e2),
             color = "gray20", size = 3, shape = 17) +
   geom_point(data = dplyr::top_n(r_pageviews, 1, views),
-             aes(x = date, y = views), color = rgb(153/255, 0, 0)) +
-  scale_y_continuous(
-    breaks = seq(2e3, 10e3, 1e3),
-    labels = function(x) { return(sprintf("%.0fK", x/1e3)) }
-  ) +
-  scale_x_date(date_breaks = "2 months", date_labels = "%b\n%Y") +
-  labs(x = NULL, y = "Pageviews",
-       title = "R's releases and article pageviews on English Wikipedia",
-       subtitle = "Desktop and mobile traffic, excluding known bots") +
-  theme_minimal(base_size = 18, base_family = "Gill Sans")
+             aes(x = date, y = views), color = rgb(153/255, 0, 0))
 ```
 
 <img src="figures/pageviews_visualization_2-1.png" width="\linewidth" style="display: block; margin: auto;" />
@@ -340,14 +346,14 @@ ggplot(r_pageviews, aes(x = date, y = views)) +
 Final Remarks
 -------------
 
-Source for the whole shebang is up on GitHub: [bearloga/wmf](https://github.com/bearloga/wmf/tree/master/presentations/talks/Cascadia%20R%20Conference%202017), available under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/)
+Source for the whole shebang is up on GitHub: [bearloga/wmf](https://github.com/bearloga/wmf/tree/master/presentations/talks/Cascadia%20R%20Conference%202017),[^4] available under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/)
 
-Specifically: wmf/presentations/talks/Cascadia R Conference 2017/
+Sorry for not leaving time for questions! If you have any, here's my
 
 ### Contact Info
 
 -   **Twitter**: [bearloga](https://twitter.com/bearloga)
--   **WMF-related**: <mikhail@wikimedia.org> (PGP public key: [people.wikimedia.org/~bearloga/public.asc](https://people.wikimedia.org/~bearloga/public.asc))
+-   **Presentation and WMF-related**: <mikhail@wikimedia.org> (PGP public key: [people.wikimedia.org/~bearloga/public.asc](https://people.wikimedia.org/~bearloga/public.asc))
 -   **General**: <mikhail@mpopov.com> (PGP public key on [keybase.io/mikhailpopov](https://keybase.io/mikhailpopov))
 
 [^1]: If you're **really** curious just search for [User:MPopov (WMF)](https://meta.wikimedia.org/wiki/User:MPopov_(WMF)) on [Meta-Wiki](https://meta.wikimedia.org/)
@@ -355,3 +361,5 @@ Specifically: wmf/presentations/talks/Cascadia R Conference 2017/
 [^2]: Currently: [Commons](https://commons.wikimedia.org/), [Wikivoyage](https://www.wikivoyage.org/), [Wikiquote](https://www.wikiquote.org/), [Wikisource](https://www.wikisource.org/), [Wikibooks](https://www.wikibooks.org/), [Wikinews](https://www.wikinews.org/), [Wikiversity](https://www.wikiversity.org/), [Wikispecies](https://species.wikimedia.org/), [MediaWiki](https://www.mediawiki.org/), [Meta-Wiki](https://meta.wikimedia.org/), [Wiktionary](https://www.wiktionary.org/)
 
 [^3]: [wikipediatrend](https://cran.r-project.org/package=wikipediatrend) package wraps the [stats.grok.se](http://stats.grok.se/) API which has historical Wikipedia pageview data for 2008 up to 2016 from [these pageview count dumps](https://dumps.wikimedia.org/other/pagecounts-raw/)
+
+[^4]: Specifically: **wmf/presentations/talks/Cascadia R Conference 2017/**

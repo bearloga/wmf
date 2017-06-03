@@ -3,12 +3,6 @@ title: "Open knowledge in R with Wikimedia APIs"
 author: "Mikhail Popov"
 date: '`r format(Sys.Date(), "%d %B %Y")`'
 output:
-  md_document:
-    includes:
-      before_body: prefix.md
-    toc: yes
-    toc_depth: 2
-    variant: markdown_github+backtick_code_blocks+autolink_bare_uris+startnum+definition_lists+footnotes
   beamer_presentation:
     highlight: kate
     includes:
@@ -16,6 +10,12 @@ output:
     keep_tex: yes
     latex_engine: xelatex
     md_extensions: -autolink_bare_uris+hard_line_breaks+startnum+definition_lists+footnotes+raw_tex
+  md_document:
+    includes:
+      before_body: prefix.md
+    toc: yes
+    toc_depth: 2
+    variant: markdown_github+backtick_code_blocks+autolink_bare_uris+startnum+definition_lists+footnotes
 subtitle: Follow along at `git.io/vSi6a`
 institute: Wikimedia Foundation
 ---
@@ -163,7 +163,7 @@ r_pageviews <- article_pageviews(
 
 ```{r pageviews_visualization, echo=knitr::opts_knit$get("rmarkdown.pandoc.to") != "beamer", dev='png', dpi=300, fig.align='center', out.width='\\linewidth', fig.path='figures/'}
 r_pageviews$date %<>% as.Date()
-ggplot(r_pageviews, aes(x = date, y = views)) +
+p <- ggplot(r_pageviews, aes(x = date, y = views)) +
   geom_line(color = rgb(0, 102, 153, maxColorValue = 255)) +
   geom_text(data = dplyr::top_n(r_pageviews, 1, views),
             aes(x = date, y = views, label = format(date, "%d %B %Y"),
@@ -179,6 +179,7 @@ ggplot(r_pageviews, aes(x = date, y = views)) +
        title = "Daily pageviews of R's entry on English Wikipedia",
        subtitle = "Desktop and mobile traffic, excluding known bots") +
   theme_minimal(base_size = 18, base_family = "Gill Sans")
+plot(p)
 ```
 
 ## Wikidata
@@ -246,13 +247,25 @@ WHERE {
 
 ----
 
-```{r wdqs_basic, cache=TRUE, message=FALSE}
+```{r wdqs_basic_en, cache=TRUE, message=FALSE}
 library(WikidataQueryServiceR)
 query_wikidata('SELECT DISTINCT ?instanceOfLabel
 WHERE {
   wd:Q206904 wdt:P31 ?instanceOf .
   SERVICE wikibase:label {
     bd:serviceParam wikibase:language "en"
+  }
+}') %>% head(5)
+```
+
+----
+
+```{r wdqs_basic_fr, cache=TRUE, message=FALSE}
+query_wikidata('SELECT DISTINCT ?instanceOfLabel
+WHERE {
+  wd:Q206904 wdt:P31 ?instanceOf .
+  SERVICE wikibase:label {
+    bd:serviceParam wikibase:language "fr"
   }
 }') %>% head(5)
 ```
@@ -293,14 +306,10 @@ range(r_versions_results$publicationDate)
 set.seed(20170603)
 r_versions_results$publicationDate %<>% as.Date
 r_versions_results %<>% mutate(position = 8e3 + runif(nrow(.), -2e3, 2e3))
-ggplot(r_pageviews, aes(x = date, y = views)) +
+p +
   geom_vline(data = filter(r_versions_results, publicationDate >= "2015-10-01"),
              aes(xintercept = as.numeric(publicationDate)),
              color = "gray40", linetype = "dashed") +
-  geom_line(color = rgb(0, 102, 153, maxColorValue = 255)) +
-  geom_text(data = dplyr::top_n(r_pageviews, 1, views),
-            aes(x = date, y = views, label = format(date, "%d %B %Y"),
-                hjust = "left"), nudge_x = 10, size = 6) +
   geom_text(data = filter(r_versions_results, publicationDate >= "2015-10-01"),
             aes(x = publicationDate, label = softwareVersion, y = position),
             color = "gray20", size = 6, angle = 30) +
@@ -308,28 +317,21 @@ ggplot(r_pageviews, aes(x = date, y = views)) +
             aes(x = publicationDate, y = position - 7.5e2),
             color = "gray20", size = 3, shape = 17) +
   geom_point(data = dplyr::top_n(r_pageviews, 1, views),
-             aes(x = date, y = views), color = rgb(153/255, 0, 0)) +
-  scale_y_continuous(
-    breaks = seq(2e3, 10e3, 1e3),
-    labels = function(x) { return(sprintf("%.0fK", x/1e3)) }
-  ) +
-  scale_x_date(date_breaks = "2 months", date_labels = "%b\n%Y") +
-  labs(x = NULL, y = "Pageviews",
-       title = "R's releases and article pageviews on English Wikipedia",
-       subtitle = "Desktop and mobile traffic, excluding known bots") +
-  theme_minimal(base_size = 18, base_family = "Gill Sans")
+             aes(x = date, y = views), color = rgb(153/255, 0, 0))
 ```
 
 ## Final Remarks
 
-Source for the whole shebang is up on GitHub: [bearloga/wmf](https://github.com/bearloga/wmf/tree/master/presentations/talks/Cascadia%20R%20Conference%202017), available under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/)
+Source for the whole shebang is up on GitHub: [bearloga/wmf](https://github.com/bearloga/wmf/tree/master/presentations/talks/Cascadia%20R%20Conference%202017),[^specifically] available under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/)
 
-Specifically: wmf/presentations/talks/Cascadia R Conference 2017/
+[^specifically]: Specifically: **wmf/presentations/talks/Cascadia R Conference 2017/**
+
+Sorry for not leaving time for questions! If you have any, here's my
 
 ### Contact Info
 
 - **Twitter**: [bearloga](https://twitter.com/bearloga)
-- **WMF-related**: [mikhail@wikimedia.org](mailto:mikhail@wikimedia.org)
+- **Presentation and WMF-related**: [mikhail@wikimedia.org](mailto:mikhail@wikimedia.org)
   (PGP public key: [people.wikimedia.org/~bearloga/public.asc](https://people.wikimedia.org/~bearloga/public.asc))
 - **General**:  [mikhail@mpopov.com](mailto:mikhail@mpopov.com)
   (PGP public key on [keybase.io/mikhailpopov](https://keybase.io/mikhailpopov))
