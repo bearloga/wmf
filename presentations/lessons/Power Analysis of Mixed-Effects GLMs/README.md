@@ -1,1 +1,1 @@
-[See slide deck (PDF)](figures/title_slide.png)
+![See slide deck (PDF)](figures/title_slide.png)
