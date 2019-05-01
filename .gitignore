@@ -17,3 +17,4 @@ vignettes/*.pdf
 
 presentations/talks/Cascadia R Conference 2017/presentation.tex
 presentations/talks/Cascadia R Conference 2017/presentation_cache
+*_cache/

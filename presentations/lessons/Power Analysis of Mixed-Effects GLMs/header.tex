@@ -1,0 +1,35 @@
+\usetheme{metropolis}
+
+% \setsansfont{Source Sans Pro}
+% \setmonofont{Source Code Pro}
+
+\titlegraphic{\includegraphics[height=0.1\paperheight]{wikimedia-logo.png}}
+
+% https://design.wikimedia.org/style-guide/visual-style_colors.html
+\definecolor{WikimediaBlue}{RGB}{51,102,204} % Accent50
+\definecolor{WikimediaRed}{RGB}{221,51,51} % Red50
+\definecolor{WikimediaGreen}{RGB}{0,175,137} % Green50
+\definecolor{WikimediaYellow}{RGB}{255,204,51} % Yellow50
+\definecolor{WikimediaDarkGrey}{RGB}{84,89,93} % Base20
+\definecolor{WikimediaGrey}{RGB}{162,169,177} % Base50
+\definecolor{WikimediaLightGrey}{RGB}{200,204,209} % Base70
+
+\setbeamercolor{title separator}{fg=WikimediaRed}
+\setbeamercolor{title}{fg=black}
+\setbeamercolor{author}{fg=black}
+\setbeamercolor{institute}{fg=WikimediaDarkGrey}
+\setbeamercolor{date}{fg=WikimediaGrey}
+\setbeamercolor{background canvas}{bg=white}
+\setbeamercolor{frametitle}{bg=WikimediaBlue}
+
+\usepackage{hyperref}
+\hypersetup{
+  colorlinks=true,
+  urlcolor=WikimediaGreen,
+  linkcolor=WikimediaRed
+}
+
+% Make links bold:
+\let\oldhref\href
+\renewcommand{\href}[2]{\oldhref{#1}{\bfseries#2}}
+% via http://tex.stackexchange.com/a/351652/130882

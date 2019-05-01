@@ -1,0 +1,590 @@
+---
+title: "No one GLM should have all that power"
+subtitle: "Power analysis of multilevel/hierarchical generalized linear models"
+author: "Mikhail Popov"
+date: '`r format(Sys.Date(), "%d %B %Y")`'
+output:
+  beamer_presentation:
+    highlight: kate
+    includes:
+      in_header: header.tex
+    keep_tex: yes
+    latex_engine: xelatex
+    md_extensions: -autolink_bare_uris+hard_line_breaks+startnum+definition_lists+footnotes+raw_tex
+    df_print: kable
+institute: Wikimedia Foundation
+---
+```{r setup, include=FALSE}
+library(knitr)
+library(kableExtra)
+options(digits = 3)
+opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+format_interval <- function(x, f = identity) {
+  y <- f(x)
+  return(sprintf("(%s, %s)", y[1], y[2]))
+}
+library(ggplot2)
+library(magrittr)
+# library(zeallot)
+# library(glue)
+```
+
+## Overview
+
+1. Linear regression modeling
+2. Generalized linear models
+3. Multilevel/hierarchical regression modeling
+4. Null hypothesis significance testing
+5. Simple power analysis via equations
+5. Complex power analysis via simulations
+
+## Linear regression modeling
+
+$$
+y_i = \beta_0 + \beta_1 x_{1i} + \beta_2 x_{2i} + \epsilon_i,~i = 1, \ldots, n
+$$
+
+- $i$ indexes the individual $n$ observations
+- $y$ is the response variable
+- $x_1$ and $x_2$ are the predictor variables
+- $\beta$ are the regression coefficients
+  - $\beta_0$ is the intercept term
+  - $\beta_1$ and $\beta_2$ are the slopes for $x_1$ and $x_2$, respectively
+- $\epsilon_i \sim \mathcal{N}(0, \sigma)$ is the random error term
+  - independently and identically distributed (iid)
+  - from a $\mathcal{N}$ormal distribution with mean 0 and standard deviation $\sigma$
+
+----
+
+In general, when there are $p$ predictor variables: $$\begin{aligned}
+  y_i &= \beta_0 + \beta_1 x_{1i} + \cdots + \beta_p x_{pi} + \epsilon_i, \\
+  \epsilon_i &\sim \mathcal{N}(0, \sigma),~i = 1, \ldots, n
+\end{aligned}$$
+
+which we write consisely (in matrix multiplication form) as $$
+\mathbf{y} = \mathbf{X} \beta + \epsilon,~\epsilon \overset{iid}{\sim} \mathcal{N}(0, \sigma)
+$$
+
+which is sometimes written as $$
+y \sim \mathcal{N}(\mathbf{X}\beta, \sigma)
+$$
+
+## Generalized Linear Models (GLMs)
+
+$$\begin{aligned}
+\mathrm{E}(y) = \mu & = g^{-1}(\mathbf{X}\beta)\\
+g(\mu) & = \mathbf{X}\beta
+\end{aligned}$$
+
+- Model expected value $\mu$; notice no individual-level error term $\epsilon$
+- Link function $g$ transforms $\mu$ to all real numbers $\mathbb{R}$
+  - $g = \log$[^base] is most common for Poisson regression for count outcomes, in which case the inverse is the $\exp$ function
+  - $\mathrm{logit}$ is most common for logistic regression for binary outcomes; $\mathrm{logit}^{-1}$ is the inverse function which maps $[-\infty, +\infty] \rightarrow [0, 1]$
+
+[^base]: base $e$ is assumed for logarithms in statistics literature, base 10 is always made explicit as $\log_{10}$
+
+## GLM example 1: logistic regression
+
+```{r, echo=FALSE}
+set.seed(42)
+n <- 50
+
+x <- seq(-10, 10, length.out = 100)
+
+binom_data <- data.frame(x = runif(n, -10, 10)) %>%
+  dplyr::mutate(
+    y = purrr::map_int(x, ~ rbinom(1, 1, arm::invlogit(0.6 * .x))),
+    class = factor(y, c(0, 1), c("'0' class", "'1' class"))
+  )
+
+binom_true <- data.frame(x = x, y = arm::invlogit(0.6 * x))
+
+binom_model <- glm(y ~ x, data = binom_data, family = binomial())
+binom_yhat <- binom_model %>%
+  predict(data.frame(x = x), se.fit = TRUE) %>%
+  .[c("fit", "se.fit")] %>%
+  as.data.frame %>%
+  dplyr::mutate(
+    p_lower = arm::invlogit(fit - 2 * se.fit),
+    p_est = arm::invlogit(fit),
+    p_upper = arm::invlogit(fit + 2 * se.fit)
+  )
+```
+```{r logistic_regression_dataviz, dev='png', dpi=300, fig.align='center', out.width='\\linewidth', fig.path='figures/', echo=FALSE}
+ggplot(binom_data, aes(x = x)) +
+  geom_ribbon(
+    aes(ymin = p_lower, ymax = p_upper, fill = "Estimated from data"),
+    data = binom_yhat, alpha = 0.1
+  ) +
+  geom_line(
+    aes(y = p_est, linetype = "Estimated from data", color = "Estimated from data"),
+    data = binom_yhat
+  ) +
+  geom_point(aes(y = y, shape = class), size = 2) +
+  geom_line(
+    aes(y = y, linetype = "Actual", color = "Actual"),
+    data = binom_true
+  ) +
+  scale_linetype_manual(values = c("Estimated from data" = "dashed", "Actual" = "solid")) +
+  scale_fill_manual(values = c("Estimated from data" = "blue")) +
+  scale_color_manual(values = c("Actual" = "red", "Estimated from data" = "blue")) +
+  guides(
+    fill = FALSE,
+    shape = guide_legend(title = "Data"),
+    color = guide_legend(title = "Probability"), linetype = guide_legend(title = "Probability")
+  ) +
+  labs(x = "x", y = NULL, title = "Binary outcome") +
+  hrbrthemes::theme_ipsum("Source Sans Pro") +
+  theme(legend.position = "bottom")
+```
+
+## GLM example 2: Poisson regression
+
+```{r, echo=FALSE}
+pois_data <- data.frame(x = runif(n, -10, 10)) %>%
+  dplyr::mutate(
+    lambda = exp(0.2 * x),
+    y = purrr::map_int(lambda, ~ rpois(1, .x))
+  )
+
+pois_true <- data.frame(x = x, y = exp(0.2 * x))
+
+pois_model <- glm(y ~ x, data = pois_data, family = poisson)
+pois_yhat <- pois_model %>%
+  predict(data.frame(x = x), se.fit = TRUE, type = "response") %>%
+  .[c("fit", "se.fit")] %>%
+  as.data.frame %>%
+  dplyr::mutate(
+    p_lower = fit - 2 * se.fit,
+    p_est = fit,
+    p_upper = fit + 2 * se.fit
+  )
+```
+```{r poisson_regression_dataviz, dev='png', dpi=300, fig.align='center', out.width='\\linewidth', fig.path='figures/', echo=FALSE}
+ggplot(pois_data, aes(x = x)) +
+  geom_ribbon(
+    aes(ymin = p_lower, ymax = p_upper, fill = "Estimated from data"),
+    data = pois_yhat, alpha = 0.1
+  ) +
+  geom_line(
+    aes(y = p_est, linetype = "Estimated from data", color = "Estimated from data"),
+    data = pois_yhat
+  ) +
+  geom_point(aes(y = y), size = 2) +
+  geom_line(
+    aes(y = y, linetype = "Actual", color = "Actual"),
+    data = pois_true
+  ) +
+  scale_linetype_manual(values = c("Estimated from data" = "dashed", "Actual" = "solid")) +
+  scale_fill_manual(values = c("Estimated from data" = "blue")) +
+  scale_color_manual(values = c("Actual" = "red", "Estimated from data" = "blue")) +
+  scale_y_continuous(breaks = 0:10, minor_breaks = NULL) +
+  guides(
+    fill = FALSE,
+    color = guide_legend(title = "Rate"), linetype = guide_legend(title = "Rate")
+  ) +
+  labs(x = "x", y = NULL, title = "Count outcome") +
+  hrbrthemes::theme_ipsum("Source Sans Pro") +
+  theme(legend.position = "bottom")
+```
+
+## Multilevel/hierarchical regression modeling
+
+Also called "multilevel modeling" and "mixed-effects modeling", which refers to model having *constant* (fixed) effects and *varying* (random) effects:
+
+- $\beta$ coefficients (slopes and intercept) are *constant* effects
+- $\epsilon$ is a *varying* effect which allows each observation to vary from the expected value
+
+Hierarchical regression models enable:
+
+- accounting for individual- and group-level variation
+- pooling of information; you can get decent estimates even with small sample sizes
+  
+### Software
+
+- **Python**: [StatsModels](https://www.statsmodels.org/) (look for "mixed"), [PyMC3](https://docs.pymc.io/)
+- **R**: [lme4](https://cran.r-project.org/package=lme4), [brms](https://mc-stan.org/users/interfaces/brms), [RStanArm](https://mc-stan.org/users/interfaces/rstanarm)
+
+## Examples
+
+### sameAs A/B test
+
+- Model of search engine-referred visits per wiki
+- Language treated as random effect (269 groups)
+
+### Cohort analysis
+
+- Multiple observations across time per user ("repeated measures")
+- Multiple cohorts of users
+- Multiple wikis
+
+### Brand awareness survey
+
+- Multiple survey responses per household
+- Random households per neighborhood
+- Random neighborhoods in area
+
+## Varying intercept model notation
+
+$$\begin{aligned}
+y_i & \sim \mathcal{N}(\alpha_{j[i]} + \beta_1 x_1 + \cdots + \beta_p x_p, \sigma_y),~i = 1, \ldots, n\\
+\alpha_j & \sim \mathcal{N}(\mu, \sigma_\alpha),~j = 1, \ldots, J
+\end{aligned}$$
+
+- $i$ indexes individual observations in dataset
+- $j$ indexes groups present in data
+- $j[i]$ is the $j$-th group that $i$-th observation belongs to
+- $\alpha_1, \ldots, \alpha_J$ are varying intercepts (random effects)
+- $\mu$ is the overall intercept around which $\alpha_1, \ldots, \alpha_J$ are distributed
+- $\sigma_y$ is individual variability, $\sigma_\alpha$ is group variability
+
+## Hierarchy (multiple levels) of varying intercepts
+
+$$\begin{aligned}
+y_i & \sim \mathcal{N}(\alpha_{j[i]} + \beta x_i, \sigma_y),~i = 1, \ldots, n\\
+\alpha_j & \sim \mathcal{N}(\gamma_{k[j]}, \sigma_\alpha),~j = 1, \ldots, J\\
+\gamma_k & \sim \mathcal{N}(\mu, \sigma_\gamma),~k = 1, \ldots, K
+\end{aligned}$$
+
+**Scenario**: local awareness of Wikipedia
+
+- $y$ is an awareness score, $x$ is age at survey time (or other covariate)
+- each household may have 1-10 people in it
+- $n$ total survey responses from $J$ households
+  - responses from household likely to correlate
+  - $\alpha_j$ is average awareness of household
+- $\gamma_k$ is average awareness across households in neighborhood $k$
+- $\mu$ is average awareness across neighborhoods in surveyed area
+
+**Next step**: letting effect of age on awareness vary by neighborhood
+
+## Varying intercept and varying slope
+
+$$\begin{aligned}
+y_i & \sim \mathcal{N}(\alpha_{j[i]} + \beta_{j[i]}x, \sigma_y),~i = 1, \ldots, n\\
+\begin{pmatrix}\alpha_j\\ \beta_j \end{pmatrix} & \sim \mathcal{N}\left(
+\begin{pmatrix}\mu_\alpha\\ \mu_\beta \end{pmatrix},
+\begin{pmatrix}\sigma^2_\alpha & \rho \sigma_\alpha \sigma_\beta\\ \rho \sigma_\alpha \sigma_\beta & \sigma^2_\beta\end{pmatrix} \right),~j = 1, \ldots, J
+\end{aligned}$$
+
+In the way that $\alpha_{j[i]}$ is the **intercept** of the $j$-th group that observation $i$ belongs to, $\beta_{j[i]}$ is the **slope** of that $j$-th group.
+
+The model has the $\alpha_j, \beta_j$ pairs distributed according to a [multivariate Normal](https://en.wikipedia.org/wiki/Multivariate_normal_distribution): $\mathcal{N}(\boldsymbol{\mu}, \boldsymbol{\Sigma})$ where:
+
+- $\boldsymbol{\mu} = \begin{pmatrix}\mu_\alpha\\ \mu_\beta \end{pmatrix}$ is the overall intercept and overall slope
+- $\boldsymbol{\Sigma}$ is the covariance matrix with the between-group correlation parameter $\rho$
+
+## Null hypothesis signficance testing
+
+Suppose we have a varying-intercept model with one predictor variable $x$ which may be continuous or a binary indicator: $$\begin{aligned}
+y_i & = \alpha_{j[i]} + \beta x_i + \epsilon_i\\
+\alpha_j & \sim \mathcal{N}(\mu, \sigma_\alpha),~j = 1, \ldots, J\\
+\epsilon_i & \sim \mathcal{N}(0, \sigma_\epsilon),~i = 1, \ldots, n
+\end{aligned}$$
+
+We are interested in whether $\beta$ (effect of unit increase in $x$ on expected value of $y$) is statistically significant: $$\begin{aligned}
+\mathrm{H}_0 & : \beta = 0\\
+\mathrm{H}_a & : \beta \neq 0
+\end{aligned}$$
+
+which is tested through a two-tailed *t*-test with $n - J - 1$ degrees of freedom.
+
+## NHST continued
+
+```{r nhst_error_table, rsults='asis', echo=FALSE}
+nhst_error_table <- dplyr::tibble(
+  decision = c("Fail to reject", "Reject"),
+  h0_true = c(
+    "TN: $1 - \\alpha$",
+    "FN (Type II error): $\\beta$"
+  ),
+  h0_false = c(
+    "FP (Type I error): $\\alpha$",
+    "TP: $1 - \\beta$"
+  )
+)
+nhst_error_table %>%
+  kable(
+    format = "latex",
+    col.names = c("Decision about $\\mathrm{H}_0$", "True", "False"),
+    align = c("r", "c", "c"), escape = FALSE, row.names = FALSE
+  ) %>%
+  kable_styling() %>%
+  row_spec(0, bold = TRUE) %>%
+  add_header_above(c(" " = 1, "Null hypothesis $\\\\mathrm{H}_0$" = 2), bold = TRUE, escape = FALSE)
+```
+
+- Type I error (false positive) is also the **significance level**. $\alpha$ is the probability of (incorrectly) rejecting $\mathrm{H}_0$ -- when it is actually true and should not be rejected
+- **Power** ($1 - \beta$) is the probability of (correctly) rejecting $\mathrm{H}_0$ -- when it is actually false and should be rejected
+
+## Simple power analysis via equations
+
+May be used to perform power analyses for *t* tests, *F* tests, $\chi^2$ tests, and others:
+
+- [G\*Power](http://www.gpower.hhu.de/) application for Mac and Windows
+- [pwr](https://cran.r-project.org/package=pwr) package for R
+- [power](https://www.statsmodels.org/stable/stats.html#module-statsmodels.stats.power) module in StatsModels library for Python
+
+Anything more complex requires fake data simulation.
+
+## Complex power analysis via simulations
+
+**Inputs**: effect sizes, standard errors, per-group sample sizes, number of simulations, significance level
+**Outputs**: proportion of simulations that yielded statistically significant results
+
+**For each simulation**:
+
+1. Generate model parameters $\beta$, $\mu$, $\alpha_j$, etc. based on effect sizes and standard errors
+2. Generate predictor variables $\mathbf{X}$ at random
+3. Generate response variable $y$ at random from model and predictors
+4. Fit model to generated dataset; e.g. using `lme4::lmer`
+5. Record significance of $\beta$ at 0.05 significance level -- that is, if the lower bound of the 95% CI is to the right of 0
+
+## Scenario: welcome email A/B test
+
+User creates a new account and provides us with an email address. They are randomly selected (with 50%/50% probability) to be in
+
+- **control group**: no email is sent
+- **treatment group**: they receive a welcome email with helpful information about contributing to Wikipedia
+
+Purpose of the welcome email is to get more users to edit at least once in the first 48 hours after registration. We will refer to this as *activation*.
+
+We hypothesize that the welcome email will increase the probability of activation by at most 4%.
+
+We want to estimate sample size that has enough power to reliable detect a 4% difference in activation probability.
+
+## Data generating process
+
+We assume there is not an excess of non-activations, but in practice:
+
+- Some users provide fake email addresses
+- Some users don't check their emails frequently enough
+- Some users may get discouraged by wikitext, editing UX, policies, and/or communities
+
+These result in *multiple* data generating processes, one of which yields excessive non-activations (zeros), which is handled through *[zero-inflated models](https://en.wikipedia.org/wiki/Zero-inflated_model)*.
+
+For this example we assume a single data generating process.
+
+## The "divide by 4 rule" for logistic regression
+
+Gelman and Hill (2006)[^GelmanHill] introduce the helpful "divide by 4 rule":
+
+> We can take logistic regression coefficients (other than the constant term) and divide them by 4 to get an upper bound of the predictive difference corresponding to a unit difference in $x$.
+
+Going backwards from the upper bound of predictive difference of 4%, we get $\beta = 0.04 \times 4 = 0.16$. For the standard error:
+
+- 0.01 yields a 95% CI of `r format_interval((0.16 + 1.96 * c(-0.01, 0.01)) / 4, scales::percent_format(0.1))`
+- 0.05 yields a 95% CI of `r format_interval((0.16 + 1.96 * c(-0.05, 0.05)) / 4, scales::percent_format(0.1))`
+- 0.1 yields a 95% CI of `r format_interval((0.16 + 1.96 * c(-0.1, 0.1)) / 4, scales::percent_format(0.1))`, which contains 0
+
+[^GelmanHill]: Gelman, A., & Hill, J. (2006). Data Analysis Using Regression and Multilevel/Hierarchical Models. Cambridge University Press.
+
+## Model and parameters
+
+$$\begin{aligned}
+y_i & \sim \mathrm{Bernoulli}(p_i),~i = 1, \ldots, n\\
+\mathrm{logit}(p_i) & = \alpha_{j[i]} + \beta x_i\\
+\alpha_j & \sim \mathcal{N}(\mu, \sigma_\alpha),~j = 1, \ldots, J
+\end{aligned}$$
+
+- From previous slide, we have $\beta = 0.16, \sigma_\beta = 0.05$
+- Set $\mu = -2.5, \sigma_{\mu} = 0.3$
+  - $\mathrm{logit}^{-1}(-2.5)$ is 7.5%
+  - $-2.5 \pm 2 \times 0.3$ yields a 95% CI of `r format_interval(arm::invlogit(-2.5 + 2 * c(-0.3, 0.3)), scales::percent_format(0.1))`
+  - wide range for overall, baseline activation probabilities
+- Set each wiki's baseline activation rate $\alpha_j$ as deviating from overall baseline activation rate $\mu$
+  - Since we assume Normality, the [68-95-99.7 rule](https://en.wikipedia.org/wiki/68%E2%80%9395%E2%80%9399.7_rule) states 99.7% of wikis would be within $3\sigma_\alpha$ of the mean
+  - With $\sigma_\alpha = 0.2$ and $\mu = -2.5$, we'd get a 95% CI of `r format_interval(arm::invlogit(-2.5 + 3 * c(-0.2, 0.2)), scales::percent_format(0.1))`
+
+## R packages
+
+### Essentials
+
+```{r packages}
+library(magrittr) # for %>% piping
+library(arm) # for invlogit & se.fixef
+library(purrr) # for functional programming
+```
+
+### Parallelization
+
+```{r parallelization}
+library(furrr) # future + purrr
+options(mc.cores = 4)
+plan(multiprocess)
+```
+
+## Quick intro to `purrr`
+
+`map(x, f)` applies function `f` to each element in `x`:
+
+```{r}
+named_list <- list(A = 1:3, B = 4:9, C = 1:9)
+map(named_list, length) # output is always a list
+```
+
+## Specifying output type
+
+```{r}
+map_int(named_list, length) # integer vector
+map_lgl(named_list, ~ length(.x) > 3) # logical vector
+try(map_lgl(named_list, length)) # error
+```
+
+## Stitching `data.frame` output
+
+Suppose we have a sample of size $n$ drawn from distribution $\mathcal{N}(\mu = 3, \sigma = 2)$. To do inference on $\mu$, we estimate via sample mean and quantify uncertainty via standard error. To see the difference that $n$ makes:
+
+```{r, echo=FALSE}
+set.seed(42)
+```
+```{r sample_mean}
+sample_mean <- function(n) {
+  x <- rnorm(n, mean = 3, sd = 2)
+  return(list(n = n, est = mean(x), se = sd(x)/sqrt(n)))
+}
+map_dfr(c(10, 50, 100, 500), sample_mean)
+```
+
+## Simulating fake data
+
+```{r simulate_dataset, message=FALSE, warning=FALSE}
+simulate_dataset <- function(N) {
+  mu <- rnorm(1, -2.5, 0.3)
+  alphas <- replicate(length(N), rnorm(1, mu, 0.2))
+  beta <- rnorm(1, 0.16, 0.05)
+  fake_data <- imap_dfr(N, ~ data.frame(
+    wiki = .y,
+    treatment = rbinom(.x, 1, 0.5)
+  )) %>% dplyr::mutate(
+    p = invlogit(alphas[wiki] + beta * treatment),
+    y = map_int(p, ~ rbinom(1, 1, prob = .x)),
+  )
+  return(fake_data)
+}
+```
+
+----
+
+```{r, echo=FALSE}
+set.seed(42)
+```
+```{r}
+simulate_dataset(c(3, 3, 3))
+```
+
+## Calculating power
+
+```{r estimate_power}
+estimate_power <- function(N, n_sims = 1000) {
+  significant <- future_map_lgl(1:n_sims, function(i) {
+    fit <- lme4::glmer(
+      y ~ treatment + (1 | wiki),
+      data = simulate_dataset(N), family = binomial()
+    )
+    beta_est <- fixef(fit)["treatment"]
+    beta_se <- se.fixef(fit)["treatment"]
+    return(beta_est - 2 * beta_se > 0) # H0: beta <= 0
+  })
+  return(mean(significant)) # Pr(reject H0 | H0 is false)
+}
+```
+
+----
+
+If want to calculate the probability of correctly rejecting $$
+\mathrm{H}_0 : \beta \leq 0
+$$ in favor of $$
+\mathrm{H}_a : \beta > 0
+$$ after running an experiment on 2 wikis on 2.5K and 1.7K users, respectively:
+
+```{r, echo=FALSE}
+set.seed(42)
+```
+```{r, cache=TRUE}
+estimate_power(c(2500, 1700))
+```
+
+## Power analysis
+
+```{r power_analysis, cache=TRUE}
+sample_sizes <- expand.grid(
+  users_per_wiki = seq(1e3, 5e3, 1e3),
+  wikis = 2:5
+)
+
+power_analysis <- sample_sizes %>%
+  dplyr::mutate(
+    power = map2_dbl(users_per_wiki, wikis, function(N, J) {
+      Ns <- rep(N, J) # e.g. rep(10, 2) creates c(10, 10)
+      return(estimate_power(Ns))
+    })
+  )
+```
+
+----
+
+```{r visualize, dev='png', dpi=300, fig.align='center', out.width='\\linewidth', fig.path='figures/', echo=FALSE}
+# library(ggrepel)
+
+power_analysis %>%
+  ggplot(aes(
+    x = factor(users_per_wiki), group = factor(wikis),
+    y = power, color = factor(wikis)
+  )) +
+  stat_identity(geom = "line", size = 1.1) +
+  geom_point() +
+  geom_label(aes(label = scales::percent(power, 0.1)), show.legend = FALSE) +
+  labs(
+    x = "Sample size per wiki", y = "Power", color = "Wikis in A/B test",
+    title = "Welcome email A/B test power analysis"
+  ) +
+  scale_color_brewer(palette = "Set1") +
+  scale_y_continuous(labels = scales::percent_format(1), limits = c(0, 1)) +
+  hrbrthemes::theme_ipsum("Source Sans Pro") +
+  theme(legend.position = "bottom")
+```
+
+## Total sample sizes and power
+
+```{r power_comparison, echo=FALSE}
+power_analysis %>%
+  dplyr::mutate(
+    total_users = users_per_wiki * wikis,
+    power = scales::percent(power, 0.1)
+  ) %>%
+  dplyr::select(users_per_wiki, wikis, total_users, power) %>%
+  dplyr::top_n(10, power) %>%
+  dplyr::arrange(desc(total_users), dplyr::desc(power)) %>%
+  kable(
+    col.names = c("Users per wiki", "Wikis", "Total users", "Estimated power"),
+    align = c("r", "r", "r", "r")
+  )
+```
+
+## Key takeaways
+
+- Multilevel/hierarchical models when data has a nested structure
+  - Repeated measures and pre/post-intervention measurements are nested within subject
+  - You may have multiple levels of nesting
+- Estimating power through simulation is actually relatively easy
+  - The hard part is figuring out what effect sizes and standard deviations/errors to use
+  - R packages like `purrr` (and `furrr`) make computations easier
+- You get about the same power from 5K users from 2 wikis as you get from 2K users from 5 wikis
+  - So if a large sample size on a per-wiki basis is difficult or expensive, testing on more wikis but with smaller sample sizes yields similar reliability
+
+## Resources on multilevel/hierarchical modeling
+
+### Python
+
+- [A Primer on Bayesian Methods for Multilevel Modeling](https://docs.pymc.io/notebooks/multilevel_modeling.html) (in PyMC3)
+- [Hierarchical GLM in PyMC3](https://docs.pymc.io/notebooks/GLM-hierarchical.html)
+- [A Primer on Bayesian Multilevel Modeling using PyStan](https://mc-stan.org/users/documentation/case-studies/radon.html)
+- [Comparing R lmer to Statsmodels MixedLM](https://nbviewer.jupyter.org/urls/umich.box.com/shared/static/6tfc1e0q6jincsv5pgfa.ipynb)
+
+### R
+
+- [Advanced Bayesian Multilevel Modeling with the R Package brms](https://cran.r-project.org/web/packages/brms/vignettes/brms_multilevel.pdf) (PDF)
+- [Bayesian Linear Mixed Models using Stan: A tutorial for psychologists, linguists, and cognitive scientists](http://www.ling.uni-potsdam.de/~vasishth/statistics/BayesLMMs.html)
+- [Introduction to multilevel modeling using rstanarm: A tutorial for education researchers](https://mc-stan.org/users/documentation/case-studies/tutorial_rstanarm.html)
+- [Longitudinal mixed-effects models with lme4](http://lme4.r-forge.r-project.org/slides/2009-07-07-Rennes/3Longitudinal-4.pdf) (PDF, slides)
