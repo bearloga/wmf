@@ -1,6 +1,6 @@
 # Open knowledge in R with Wikimedia APIs
 
-<a title="By Wikimedia Foundation (Wikimedia Foundation) [CC BY-SA 3.0 (https://creativecommons.org/licenses/by-sa/3.0)], via Wikimedia Commons" href="https://commons.wikimedia.org/wiki/File%3AWmf_logo_horiz_K.svg"><img width="64" alt="Wmf logo horiz K" src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/60/Wmf_logo_horiz_K.svg/64px-Wmf_logo_horiz_K.svg.png"/></a> <a rel="license" href="https://creativecommons.org/licenses/by-sa/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-sa/4.0/80x15.png" /></a>
+<a title="By Wikimedia Foundation (Wikimedia Foundation) [CC BY-SA 3.0 (http://creativecommons.org/licenses/by-sa/3.0)], via Wikimedia Commons" href="https://commons.wikimedia.org/wiki/File%3AWikimedia_Foundation_logo_-_horizontal.svg"><img width="100" alt="Wikimedia Foundation logo - horizontal" src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/09/Wikimedia_Foundation_logo_-_horizontal.svg/100px-Wikimedia_Foundation_logo_-_horizontal.svg.png"/></a> <a rel="license" href="https://creativecommons.org/licenses/by-sa/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-sa/4.0/80x15.png" /></a>
 
 ## Abstract
 
